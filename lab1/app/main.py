@@ -1,25 +1,38 @@
-from fastapi import FastAPI, Request
-from datebase import SessionLocal, engine
-from models import Base, Visit
-import datetime
+from datetime import datetime
 
-# Создаем таблицы БД при старте
+from fastapi import FastAPI, Request
+from fastapi.responses import PlainTextResponse
+
+from database import SessionLocal, engine
+from models import Base, Visit
+
+
+# Создание таблицы при старте приложения
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
 
-@app.get("/hello")
+@app.get("/hello", response_class=PlainTextResponse)
 async def hello(request: Request):
-    #Получаем IP клиента
+    # Получаем IP-адрес клиента
     client_ip = request.client.host
 
-    # Сохраняем запись в БД
+    # Получаем текущее время
+    current_time = datetime.utcnow()
+
+    # Создаём запись
     db = SessionLocal()
-    visit = Visit(ip_address=client_ip, timestamp=datetime.datetime.utcnow())
-    db.add(visit)
-    db.commit()
-    db.close()
 
+    try:
+        visit = Visit(
+            timestamp=current_time,
+            ip_address=client_ip
+        )
 
-    return {"message": "Hello"}
+        db.add(visit)
+        db.commit()
+    finally:
+        db.close()
+
+    return "Hello"

@@ -1,10 +1,13 @@
-from sqlalchemy import Column, Integer, String, DateTime
+from datetime import datetime
+
+from sqlalchemy import Column, DateTime, Integer, String
+
 from database import Base
-import datetime
+
 
 class Visit(Base):
-   __tablename__ = "visits"
+    __tablename__ = "visits"
 
-   id = Column(Integer, primary_key=True, index=True)
-   timestamp = Column(DateTime, default=datetime.datetime.utcnow)
-   ip_address = Column(String, nullable=False)
+    id = Column(Integer, primary_key=True, index=True)
+    timestamp = Column(DateTime, default=datetime.utcnow)
+    ip_address = Column(String, nullable=False)
