@@ -1,0 +1,22 @@
+[project]
+name = "lab2"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "Kopylov Vladimir",email = "Ruwer555@mail.ru"}
+]
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi (>=0.142.2,<0.143.0)",
+    "uvicorn (>=0.54.0,<0.55.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[dependency-groups]
+dev = [
+    "pytest (>=9.1.1,<10.0.0)"
+]
