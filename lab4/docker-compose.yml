@@ -1,0 +1,125 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-flights_db}
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-app}
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-app} -d ${POSTGRES_DB:-flights_db}"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  provider1:
+    build:
+      context: .
+      dockerfile: providers/Dockerfile
+    environment:
+      PROVIDER_ID: "1"
+      BASE_DELAY_MS: "300"
+      DELAY_JITTER: "0.30"
+      ERROR_RATE: "0.05"
+      SLOW_RATE: "0.0"
+      SLOW_DELAY_SECONDS: "3.0"
+      PROVIDER_FLIGHTS_PER_DAY: ${PROVIDER_FLIGHTS_PER_DAY:-500}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=1)"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+
+  provider2:
+    build:
+      context: .
+      dockerfile: providers/Dockerfile
+    environment:
+      PROVIDER_ID: "2"
+      BASE_DELAY_MS: "500"
+      DELAY_JITTER: "0.30"
+      ERROR_RATE: "0.05"
+      SLOW_RATE: "0.0"
+      SLOW_DELAY_SECONDS: "3.0"
+      PROVIDER_FLIGHTS_PER_DAY: ${PROVIDER_FLIGHTS_PER_DAY:-500}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=1)"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+
+  provider3:
+    build:
+      context: .
+      dockerfile: providers/Dockerfile
+    environment:
+      PROVIDER_ID: "3"
+      BASE_DELAY_MS: "800"
+      DELAY_JITTER: "0.30"
+      ERROR_RATE: "0.05"
+      SLOW_RATE: "0.10"
+      SLOW_DELAY_SECONDS: "3.0"
+      PROVIDER_FLIGHTS_PER_DAY: ${PROVIDER_FLIGHTS_PER_DAY:-500}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=1)"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+
+  seed:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    command: ["python", "-m", "app.seed"]
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://app:app@db:5432/flights_db}
+      SCHEDULE_START_DATE: ${SCHEDULE_START_DATE:-2026-10-26}
+      SCHEDULE_DAYS: ${SCHEDULE_DAYS:-120}
+      OWN_FLIGHTS_PER_DAY: ${OWN_FLIGHTS_PER_DAY:-1500}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  search:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://app:app@db:5432/flights_db}
+      PROVIDER1_URL: http://provider1:8000
+      PROVIDER2_URL: http://provider2:8000
+      PROVIDER3_URL: http://provider3:8000
+      PROVIDER_TIMEOUT_SECONDS: "2.0"
+      PROVIDER_RETRY_DELAY_SECONDS: "0.2"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./profiles:/profiles
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - seccomp:unconfined
+    depends_on:
+      db:
+        condition: service_healthy
+      seed:
+        condition: service_completed_successfully
+      provider1:
+        condition: service_healthy
+      provider2:
+        condition: service_healthy
+      provider3:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=1)"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+
+volumes:
+  postgres_data:
