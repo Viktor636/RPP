@@ -6,7 +6,7 @@ from sqlalchemy import BigInteger, DateTime, Numeric, String
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
-class Base(DeclarativeBase):
+class Base(DeclarativeBase): #Сам Разбирается с созданием таблиц, регистрацией моделей
     pass
 
 

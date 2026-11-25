@@ -6,22 +6,22 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-loyalty}
       POSTGRES_DB: ${POSTGRES_DB:-loyalty}
     volumes:
-      - pg_data:/var/lib/postgresql/data
+      - pg_data:/var/lib/postgresql/data #сохранение базы между docker compose down и up
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"] #$$ чтобы передал переменную в контейнер, а не сам подставил
       interval: 5s
       timeout: 5s
       retries: 12
 
   rabbitmq:
-    image: rabbitmq:4-management
+    image: rabbitmq:4-management # веб панель 
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-loyalty}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-loyalty}
     ports:
       - "15672:15672"
     volumes:
-      - rabbit_data:/var/lib/rabbitmq
+      - rabbit_data:/var/lib/rabbitmq # сохранение данных брокера 
     healthcheck:
       test:
         - "CMD-SHELL"
@@ -31,7 +31,7 @@ services:
       retries: 15
 
   worker:
-    build: ./worker
+    build: ./worker # собирается из докерфайла
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-loyalty}:${POSTGRES_PASSWORD:-loyalty}@postgres:5432/${POSTGRES_DB:-loyalty}
       RABBITMQ_URL: amqp://${RABBITMQ_DEFAULT_USER:-loyalty}:${RABBITMQ_DEFAULT_PASS:-loyalty}@rabbitmq:5672/
@@ -62,9 +62,9 @@ services:
     build: ./notifier
     environment:
       RABBITMQ_URL: amqp://${RABBITMQ_DEFAULT_USER:-loyalty}:${RABBITMQ_DEFAULT_PASS:-loyalty}@rabbitmq:5672/
-      MIN_DELAY_MS: "200"
-      MAX_DELAY_MS: "1500"
-      UNSUBSCRIBED: ""
+      MIN_DELAY_MS: "200" # диапазон задержки имитации
+      MAX_DELAY_MS: "1500" #диапазон задержки
+      UNSUBSCRIBED: "" #пустой список отписавшихся
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -84,5 +84,5 @@ services:
     restart: unless-stopped
 
 volumes:
-  pg_data:
+  pg_data: #пустые тома с драйвером локал
   rabbit_data:

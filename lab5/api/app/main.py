@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import time
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager # Превращения async-генератора в async-контекст-менеджер
 
 from fastapi import FastAPI, HTTPException
 from sqlalchemy import select, text
@@ -15,11 +15,11 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("api")
 
 
-async def _wait_for_tables(timeout: float = 60.0) -> None:
+async def _wait_for_tables(timeout: float = 60.0) -> None: # Ждём, пока worker создаст таблицы
     start = time.monotonic()
     while time.monotonic() - start < timeout:
         try:
-            async with engine.connect() as conn:
+            async with engine.connect() as conn: # Проверяем, есть ли таблица accounts.
                 await conn.execute(text("SELECT 1 FROM accounts LIMIT 1"))
             return
         except Exception:
@@ -35,8 +35,8 @@ async def lifespan(app: FastAPI):
     except Exception:
         logger.exception("Broker is not available on startup")
     yield
-    await publisher.close()
-    await engine.dispose()
+    await publisher.close() # корректно закрыть соединение.
+    await engine.dispose() # закрыть пул соединений SQLAlchemy.
 
 
 app = FastAPI(title="Loyalty API", lifespan=lifespan)
@@ -44,16 +44,16 @@ app = FastAPI(title="Loyalty API", lifespan=lifespan)
 
 @app.post("/operations", status_code=202)
 async def create_operation(op: OperationIn):
-    payload = op.model_dump(mode="json")
-    ok = await publisher.publish_operation(payload, op.operation_id)
+    payload = op.model_dump(mode="json") # превращает в dict
+    ok = await publisher.publish_operation(payload, op.operation_id)# публикует в очередь. ok=False значит: две попытки провалились.
     if not ok:
         raise HTTPException(status_code=503, detail="Broker unavailable")
-    return {"operation_id": op.operation_id}
+    return {"operation_id": op.operation_id} # тело ответа
 
 
 @app.get("/operations/{operation_id}")
 async def get_operation(operation_id: str):
-    async with SessionLocal() as session:
+    async with SessionLocal() as session: # гарантирует закрытие.
         row = await session.get(Operation, operation_id)
         if row is None:
             raise HTTPException(status_code=404, detail="Not found")

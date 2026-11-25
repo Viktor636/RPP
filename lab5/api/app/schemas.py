@@ -5,7 +5,7 @@ from typing import Literal, Optional
 from pydantic import BaseModel, model_validator
 
 
-class OperationIn(BaseModel):
+class OperationIn(BaseModel): #Автоматом парсит входящие данные и приводит данные к указанным типам
     operation_id: str
     type: Literal["purchase", "return", "redeem"]
     customer_id: str
@@ -15,7 +15,7 @@ class OperationIn(BaseModel):
     points: Optional[int] = None
     occurred_at: datetime
 
-    @model_validator(mode="after")
+    @model_validator(mode="after") # запускается после того, как все поля распарсены
     def _validate(self) -> "OperationIn":
         if self.type in ("purchase", "redeem"):
             if self.amount is None:
